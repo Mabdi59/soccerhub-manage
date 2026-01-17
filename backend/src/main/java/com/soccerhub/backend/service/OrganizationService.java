@@ -1,0 +1,45 @@
+package com.soccerhub.backend.service;
+
+import com.soccerhub.backend.entity.Organization;
+import com.soccerhub.backend.exception.ResourceNotFoundException;
+import com.soccerhub.backend.repository.OrganizationRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class OrganizationService {
+    
+    private final OrganizationRepository organizationRepository;
+    
+    public List<Organization> getAllOrganizations() {
+        return organizationRepository.findAll();
+    }
+    
+    public Organization getOrganizationById(Long id) {
+        return organizationRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Organization not found with id: " + id));
+    }
+    
+    @Transactional
+    public Organization createOrganization(Organization organization) {
+        return organizationRepository.save(organization);
+    }
+    
+    @Transactional
+    public Organization updateOrganization(Long id, Organization organizationDetails) {
+        Organization organization = getOrganizationById(id);
+        organization.setName(organizationDetails.getName());
+        organization.setDescription(organizationDetails.getDescription());
+        return organizationRepository.save(organization);
+    }
+    
+    @Transactional
+    public void deleteOrganization(Long id) {
+        Organization organization = getOrganizationById(id);
+        organizationRepository.delete(organization);
+    }
+}
