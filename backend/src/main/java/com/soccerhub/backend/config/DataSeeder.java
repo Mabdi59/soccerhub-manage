@@ -53,21 +53,21 @@ public class DataSeeder implements CommandLineRunner {
         User admin = new User();
         admin.setUsername("admin");
         admin.setEmail("admin@soccerhub.com");
-        admin.setPassword(passwordEncoder.encode("admin123"));
+        admin.setPassword(encodeSeedPassword("admin123"));
         admin.setRole(User.Role.ADMIN);
         userRepository.save(admin);
         
         User organizer = new User();
         organizer.setUsername("organizer");
         organizer.setEmail("organizer@soccerhub.com");
-        organizer.setPassword(passwordEncoder.encode("organizer123"));
+        organizer.setPassword(encodeSeedPassword("organizer123"));
         organizer.setRole(User.Role.ORGANIZER);
         userRepository.save(organizer);
         
         User referee = new User();
         referee.setUsername("referee");
         referee.setEmail("referee@soccerhub.com");
-        referee.setPassword(passwordEncoder.encode("referee123"));
+        referee.setPassword(encodeSeedPassword("referee123"));
         referee.setRole(User.Role.REFEREE);
         userRepository.save(referee);
 
@@ -75,7 +75,7 @@ public class DataSeeder implements CommandLineRunner {
         User mabdi = new User();
         mabdi.setUsername("mabdi");
         mabdi.setEmail("mabdi@soccerhub.com");
-        mabdi.setPassword(passwordEncoder.encode("mabdi123"));
+        mabdi.setPassword(encodeSeedPassword("mabdi123"));
         mabdi.setRole(User.Role.ORGANIZER);
         userRepository.save(mabdi);
 
@@ -88,6 +88,10 @@ public class DataSeeder implements CommandLineRunner {
         userRepository.save(dered);
 
         log.info("Seeded users");
+    }
+
+    private String encodeSeedPassword(String rawPassword) {
+        return passwordEncoder.encode(rawPassword);
     }
     
     private void seedOrganizations() {

@@ -50,8 +50,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     }
                 } catch (UsernameNotFoundException ex) {
                     // User referenced by the token doesn't exist in DB (e.g. token forged or user deleted).
+<<<<<<< HEAD
                     // Log at TRACE to avoid noisy output in normal operation.
                     logger.trace("User from JWT not found: " + username);
+=======
+                    // Continue without authentication and without noisy logging.
+>>>>>>> 88f390541652dc24afa3321db0db2513a58a7883
                 }
             }
         } catch (io.jsonwebtoken.JwtException | IllegalArgumentException ex) {
