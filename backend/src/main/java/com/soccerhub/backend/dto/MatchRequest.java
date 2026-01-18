@@ -29,6 +29,7 @@ public class MatchRequest {
     
     private Integer homeScore;
     private Integer awayScore;
+    private String playoffRound;
     private String status;
     private Long refereeId;
 }

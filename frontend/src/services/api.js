@@ -65,6 +65,8 @@ export const divisionsAPI = {
   create: (data) => apiClient.post('/divisions', data),
   update: (id, data) => apiClient.put(`/divisions/${id}`, data),
   delete: (id) => apiClient.delete(`/divisions/${id}`),
+  generateSchedule: (id) => apiClient.post(`/divisions/${id}/generate-schedule`),
+  generatePlayoffs: (id) => apiClient.post(`/divisions/${id}/generate-playoffs`),
 };
 
 // Teams API
