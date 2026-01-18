@@ -3,14 +3,20 @@ import Layout from '../components/Layout';
 import Modal from '../components/Modal';
 import Loading from '../components/Loading';
 import { matchesAPI, teamsAPI, divisionsAPI, venuesAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { formatDateForInput, formatDateTime, getStatusColor } from '../utils/helpers';
 
 const Schedule = () => {
+  const { isOrganizer } = useAuth();
   const [matches, setMatches] = useState([]);
   const [teams, setTeams] = useState([]);
   const [divisions, setDivisions] = useState([]);
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState('');
+  const [generateDivisionId, setGenerateDivisionId] = useState('');
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingMatch, setEditingMatch] = useState(null);
   const [formData, setFormData] = useState({
@@ -93,6 +99,31 @@ const Schedule = () => {
     setShowModal(true);
   };
 
+  const handleOpenGenerateModal = () => {
+    setGenerateError('');
+    setGenerateDivisionId('');
+    setShowGenerateModal(true);
+  };
+
+  const handleGenerateSchedule = async () => {
+    if (!generateDivisionId) {
+      setGenerateError('Please select a division.');
+      return;
+    }
+    try {
+      setGenerating(true);
+      setGenerateError('');
+      await divisionsAPI.generateSchedule(generateDivisionId);
+      setShowGenerateModal(false);
+      setGenerateDivisionId('');
+      fetchData();
+    } catch (error) {
+      setGenerateError(error.response?.data?.message || 'Failed to generate schedule.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       divisionId: '',
@@ -116,7 +147,14 @@ const Schedule = () => {
     <Layout title="Schedule">
       <div className="page-header">
         <h1 className="page-title">Match Schedule</h1>
-        <button className="btn btn-primary" onClick={handleAdd}>+ Add Match</button>
+        <div className="page-actions">
+          {isOrganizer() && (
+            <button className="btn btn-secondary" onClick={handleOpenGenerateModal}>
+              Generate Schedule
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={handleAdd}>+ Add Match</button>
+        </div>
       </div>
 
       <div className="card">
@@ -276,6 +314,39 @@ const Schedule = () => {
             />
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={showGenerateModal}
+        onClose={() => setShowGenerateModal(false)}
+        title="Generate Schedule"
+        footer={
+          <>
+            <button className="btn btn-secondary" onClick={() => setShowGenerateModal(false)} disabled={generating}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={handleGenerateSchedule} disabled={generating}>
+              {generating ? 'Generating...' : 'Generate'}
+            </button>
+          </>
+        }
+      >
+        {generateError && <div className="alert alert-error">{generateError}</div>}
+        <p>Generating a schedule will replace all existing scheduled matches for the selected division.</p>
+        <div className="form-group">
+          <label>Division *</label>
+          <select
+            className="form-control"
+            value={generateDivisionId}
+            onChange={(e) => setGenerateDivisionId(e.target.value)}
+            required
+          >
+            <option value="">Select Division</option>
+            {divisions.map((division) => (
+              <option key={division.id} value={division.id}>{division.name}</option>
+            ))}
+          </select>
+        </div>
       </Modal>
     </Layout>
   );

@@ -10,4 +10,5 @@ import java.util.List;
 public interface MatchRepository extends JpaRepository<Match, Long> {
     List<Match> findByDivisionId(Long divisionId);
     List<Match> findByHomeTeamIdOrAwayTeamId(Long homeTeamId, Long awayTeamId);
+    void deleteByDivisionIdAndStatus(Long divisionId, Match.Status status);
 }
