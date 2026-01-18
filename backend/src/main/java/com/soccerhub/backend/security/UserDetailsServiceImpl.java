@@ -17,7 +17,16 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        var user = userRepository.findByUsername(username)
+        // Normalize incoming username to avoid mismatches due to whitespace
+        String normalized = (username == null) ? null : username.trim();
+
+        var userOpt = userRepository.findByUsername(normalized);
+        if (userOpt.isEmpty() && normalized != null) {
+            // Fallback to case-insensitive lookup if exact match not found
+            userOpt = userRepository.findByUsernameIgnoreCase(normalized);
+        }
+
+        var user = userOpt
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
         
         return UserDetailsImpl.build(user);

@@ -32,18 +32,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
                 String username = tokenProvider.getUsernameFromToken(jwt);
+                if (username != null) {
+                    username = username.trim();
+                }
                 try {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    if (username != null && !username.isEmpty()) {
+                        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                    UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    } else {
+                        // No username in token (malformed) - trace log only
+                        logger.trace("JWT token did not contain a subject (username)");
+                    }
                 } catch (UsernameNotFoundException ex) {
                     // User referenced by the token doesn't exist in DB (e.g. token forged or user deleted).
-                    // Don't treat as an application error; log at debug and continue without authentication.
-                    logger.debug("User from JWT not found: " + username);
+                    // Log at TRACE to avoid noisy output in normal operation.
+                    logger.trace("User from JWT not found: " + username);
                 }
             }
         } catch (io.jsonwebtoken.JwtException | IllegalArgumentException ex) {

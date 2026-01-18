@@ -42,12 +42,14 @@ public class JwtTokenProvider {
     }
     
     public String getUsernameFromToken(String token) {
-        return Jwts.parser()
+        // Use the parser style that matches project's jjwt usage
+        String subject = Jwts.parser()
                 .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
+        return (subject == null) ? null : subject.trim();
     }
     
     public boolean validateToken(String authToken) {

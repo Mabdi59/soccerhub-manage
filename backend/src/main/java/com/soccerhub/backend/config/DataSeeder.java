@@ -79,6 +79,14 @@ public class DataSeeder implements CommandLineRunner {
         mabdi.setRole(User.Role.ORGANIZER);
         userRepository.save(mabdi);
 
+        // Add 'dered' test user to satisfy incoming tokens that reference this username
+        User dered = new User();
+        dered.setUsername("dered");
+        dered.setEmail("dered@soccerhub.com");
+        dered.setPassword(passwordEncoder.encode("dered123"));
+        dered.setRole(User.Role.ORGANIZER);
+        userRepository.save(dered);
+
         log.info("Seeded users");
     }
     
