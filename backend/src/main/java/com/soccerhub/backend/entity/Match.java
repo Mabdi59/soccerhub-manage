@@ -40,7 +40,10 @@ public class Match {
     
     @Column
     private Integer awayScore;
-    
+
+    @Column(length = 20)
+    private String playoffRound;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Status status = Status.SCHEDULED;

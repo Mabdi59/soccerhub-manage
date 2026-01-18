@@ -1,6 +1,7 @@
 package com.soccerhub.backend.controller;
 
 import com.soccerhub.backend.entity.Division;
+import com.soccerhub.backend.entity.Match;
 import com.soccerhub.backend.service.DivisionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,5 +48,15 @@ public class DivisionController {
     public ResponseEntity<Void> deleteDivision(@PathVariable Long id) {
         divisionService.deleteDivision(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/generate-schedule")
+    public ResponseEntity<List<Match>> generateSchedule(@PathVariable Long id) {
+        return ResponseEntity.ok(divisionService.generateSchedule(id));
+    }
+
+    @PostMapping("/{id}/generate-playoffs")
+    public ResponseEntity<List<Match>> generatePlayoffs(@PathVariable Long id) {
+        return ResponseEntity.ok(divisionService.generatePlayoffs(id));
     }
 }
