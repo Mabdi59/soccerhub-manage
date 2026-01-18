@@ -6,6 +6,7 @@ import Teams from './pages/Teams';
 import Schedule from './pages/Schedule';
 import Results from './pages/Results';
 import Standings from './pages/Standings';
+import Playoffs from './pages/Playoffs';
 import Settings from './pages/Settings';
 import Loading from './components/Loading';
 
@@ -49,6 +50,7 @@ function App() {
           <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
           <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
           <Route path="/standings" element={<ProtectedRoute><Standings /></ProtectedRoute>} />
+          <Route path="/playoffs" element={<ProtectedRoute><Playoffs /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           
           <Route path="*" element={<Navigate to="/" />} />

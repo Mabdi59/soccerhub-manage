@@ -2,6 +2,7 @@ package com.soccerhub.backend.service;
 
 import com.soccerhub.backend.entity.Division;
 import com.soccerhub.backend.entity.Match;
+import com.soccerhub.backend.entity.Standing;
 import com.soccerhub.backend.entity.Team;
 import com.soccerhub.backend.entity.Tournament;
 import com.soccerhub.backend.entity.Venue;
@@ -9,6 +10,7 @@ import com.soccerhub.backend.exception.BadRequestException;
 import com.soccerhub.backend.exception.ResourceNotFoundException;
 import com.soccerhub.backend.repository.DivisionRepository;
 import com.soccerhub.backend.repository.MatchRepository;
+import com.soccerhub.backend.repository.StandingRepository;
 import com.soccerhub.backend.repository.TeamRepository;
 import com.soccerhub.backend.repository.TournamentRepository;
 import com.soccerhub.backend.repository.VenueRepository;
@@ -33,6 +35,7 @@ public class DivisionService {
     private final TournamentRepository tournamentRepository;
     private final MatchRepository matchRepository;
     private final MatchService matchService;
+    private final StandingRepository standingRepository;
     
     public List<Division> getAllDivisions() {
         return divisionRepository.findAll();
@@ -116,6 +119,48 @@ public class DivisionService {
         return generatedMatches;
     }
 
+    @Transactional
+    public List<Match> generatePlayoffs(Long divisionId) {
+        Division division = getDivisionById(divisionId);
+        List<Standing> standings = standingRepository.findByDivisionIdOrderByPointsDescGoalDifferenceDesc(divisionId);
+        if (standings.size() < 4) {
+            throw new BadRequestException("Division must have at least 4 teams in standings to generate playoffs");
+        }
+
+        Tournament tournament = tournamentRepository.findById(division.getTournamentId())
+            .orElseThrow(() -> new ResourceNotFoundException("Tournament not found with id: " + division.getTournamentId()));
+
+        matchRepository.deleteByDivisionIdAndPlayoffRoundIsNotNull(divisionId);
+
+        List<Venue> venues = venueRepository.findAll();
+        int venueIndex = 0;
+        List<Standing> seeds = standings.subList(0, 4);
+        List<Match> playoffMatches = new ArrayList<>();
+        LocalDateTime semifinalDate = tournament.getEndDate().minusDays(1).atTime(LocalTime.NOON);
+
+        playoffMatches.add(createPlayoffMatch(
+            divisionId,
+            seeds.get(0).getTeamId(),
+            seeds.get(3).getTeamId(),
+            semifinalDate,
+            "SEMIFINAL",
+            venues,
+            venueIndex++
+        ));
+
+        playoffMatches.add(createPlayoffMatch(
+            divisionId,
+            seeds.get(1).getTeamId(),
+            seeds.get(2).getTeamId(),
+            semifinalDate,
+            "SEMIFINAL",
+            venues,
+            venueIndex++
+        ));
+
+        return playoffMatches;
+    }
+
     private List<List<MatchPair>> buildRoundRobinRounds(List<Long> teamIds) {
         List<Long> teams = new ArrayList<>(teamIds);
         if (teams.size() % 2 != 0) {
@@ -148,6 +193,26 @@ public class DivisionService {
         rotated.add(teams.get(teams.size() - 1));
         rotated.addAll(teams.subList(1, teams.size() - 1));
         return rotated;
+    }
+
+    private Match createPlayoffMatch(Long divisionId,
+                                     Long homeTeamId,
+                                     Long awayTeamId,
+                                     LocalDateTime matchDate,
+                                     String round,
+                                     List<Venue> venues,
+                                     int venueIndex) {
+        Match match = new Match();
+        match.setDivisionId(divisionId);
+        match.setHomeTeamId(homeTeamId);
+        match.setAwayTeamId(awayTeamId);
+        if (!venues.isEmpty()) {
+            match.setVenueId(venues.get(venueIndex % venues.size()).getId());
+        }
+        match.setMatchDate(matchDate);
+        match.setStatus(Match.Status.SCHEDULED);
+        match.setPlayoffRound(round);
+        return matchService.createMatch(match);
     }
 
     private record MatchPair(Long homeTeamId, Long awayTeamId) {

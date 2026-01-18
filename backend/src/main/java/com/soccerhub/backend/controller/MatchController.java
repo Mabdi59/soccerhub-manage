@@ -47,6 +47,7 @@ public class MatchController {
         match.setMatchDate(matchRequest.getMatchDate());
         match.setHomeScore(matchRequest.getHomeScore());
         match.setAwayScore(matchRequest.getAwayScore());
+        match.setPlayoffRound(matchRequest.getPlayoffRound());
         if (matchRequest.getStatus() != null) {
             match.setStatus(Match.Status.valueOf(matchRequest.getStatus()));
         }
@@ -67,6 +68,7 @@ public class MatchController {
         match.setMatchDate(matchRequest.getMatchDate());
         match.setHomeScore(matchRequest.getHomeScore());
         match.setAwayScore(matchRequest.getAwayScore());
+        match.setPlayoffRound(matchRequest.getPlayoffRound());
         if (matchRequest.getStatus() != null) {
             match.setStatus(Match.Status.valueOf(matchRequest.getStatus()));
         }

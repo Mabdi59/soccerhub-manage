@@ -15,6 +15,7 @@ const Sidebar = () => {
     { path: '/schedule', label: 'Schedule', icon: '📅' },
     { path: '/results', label: 'Results', icon: '⚽' },
     { path: '/standings', label: 'Standings', icon: '🏆' },
+    { path: '/playoffs', label: 'Playoffs', icon: '🥇' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];
 

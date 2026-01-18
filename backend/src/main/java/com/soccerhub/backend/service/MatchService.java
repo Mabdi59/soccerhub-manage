@@ -1,16 +1,22 @@
 package com.soccerhub.backend.service;
 
 import com.soccerhub.backend.dto.MatchResultRequest;
+import com.soccerhub.backend.entity.Division;
 import com.soccerhub.backend.entity.Match;
 import com.soccerhub.backend.entity.Standing;
+import com.soccerhub.backend.entity.Tournament;
 import com.soccerhub.backend.exception.BadRequestException;
 import com.soccerhub.backend.exception.ResourceNotFoundException;
+import com.soccerhub.backend.repository.DivisionRepository;
 import com.soccerhub.backend.repository.MatchRepository;
 import com.soccerhub.backend.repository.StandingRepository;
+import com.soccerhub.backend.repository.TournamentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -19,6 +25,8 @@ public class MatchService {
     
     private final MatchRepository matchRepository;
     private final StandingRepository standingRepository;
+    private final DivisionRepository divisionRepository;
+    private final TournamentRepository tournamentRepository;
     
     public List<Match> getAllMatches() {
         return matchRepository.findAll();
@@ -55,6 +63,7 @@ public class MatchService {
         match.setMatchDate(matchDetails.getMatchDate());
         match.setHomeScore(matchDetails.getHomeScore());
         match.setAwayScore(matchDetails.getAwayScore());
+        match.setPlayoffRound(matchDetails.getPlayoffRound());
         match.setStatus(matchDetails.getStatus());
         match.setRefereeId(matchDetails.getRefereeId());
         return matchRepository.save(match);
@@ -73,13 +82,17 @@ public class MatchService {
         match.setStatus(Match.Status.COMPLETED);
         match = matchRepository.save(match);
         
-        if (wasCompleted && oldHomeScore != null && oldAwayScore != null) {
-            reverseStandingsUpdate(match.getDivisionId(), match.getHomeTeamId(), 
-                                  match.getAwayTeamId(), oldHomeScore, oldAwayScore);
+        if (match.getPlayoffRound() == null) {
+            if (wasCompleted && oldHomeScore != null && oldAwayScore != null) {
+                reverseStandingsUpdate(match.getDivisionId(), match.getHomeTeamId(),
+                                      match.getAwayTeamId(), oldHomeScore, oldAwayScore);
+            }
+
+            updateStandings(match.getDivisionId(), match.getHomeTeamId(),
+                           match.getAwayTeamId(), result.getHomeScore(), result.getAwayScore());
+        } else {
+            handlePlayoffProgression(match);
         }
-        
-        updateStandings(match.getDivisionId(), match.getHomeTeamId(), 
-                       match.getAwayTeamId(), result.getHomeScore(), result.getAwayScore());
         
         return match;
     }
@@ -88,7 +101,7 @@ public class MatchService {
     public void deleteMatch(Long id) {
         Match match = getMatchById(id);
         
-        if (match.getStatus() == Match.Status.COMPLETED && 
+        if (match.getPlayoffRound() == null && match.getStatus() == Match.Status.COMPLETED &&
             match.getHomeScore() != null && match.getAwayScore() != null) {
             reverseStandingsUpdate(match.getDivisionId(), match.getHomeTeamId(), 
                                   match.getAwayTeamId(), match.getHomeScore(), match.getAwayScore());
@@ -130,6 +143,60 @@ public class MatchService {
         
         standingRepository.save(homeStanding);
         standingRepository.save(awayStanding);
+    }
+
+    private void handlePlayoffProgression(Match completedMatch) {
+        if (!"SEMIFINAL".equalsIgnoreCase(completedMatch.getPlayoffRound())) {
+            return;
+        }
+
+        List<Match> semifinals = matchRepository.findByDivisionIdAndPlayoffRound(
+            completedMatch.getDivisionId(), "SEMIFINAL");
+
+        boolean allCompleted = semifinals.stream().allMatch(match ->
+            match.getStatus() == Match.Status.COMPLETED &&
+            match.getHomeScore() != null &&
+            match.getAwayScore() != null
+        );
+
+        if (!allCompleted) {
+            return;
+        }
+
+        List<Long> winners = semifinals.stream()
+            .map(match -> match.getHomeScore() >= match.getAwayScore()
+                ? match.getHomeTeamId()
+                : match.getAwayTeamId())
+            .toList();
+
+        if (winners.size() < 2) {
+            return;
+        }
+
+        List<Match> finals = matchRepository.findByDivisionIdAndPlayoffRound(
+            completedMatch.getDivisionId(), "FINAL");
+        Match finalMatch = finals.isEmpty() ? null : finals.get(0);
+
+        if (finalMatch == null) {
+            Division division = divisionRepository.findById(completedMatch.getDivisionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Division not found with id: " + completedMatch.getDivisionId()));
+            Tournament tournament = tournamentRepository.findById(division.getTournamentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Tournament not found with id: " + division.getTournamentId()));
+            LocalDateTime matchDate = tournament.getEndDate().atTime(LocalTime.NOON);
+
+            Match match = new Match();
+            match.setDivisionId(completedMatch.getDivisionId());
+            match.setHomeTeamId(winners.get(0));
+            match.setAwayTeamId(winners.get(1));
+            match.setMatchDate(matchDate);
+            match.setStatus(Match.Status.SCHEDULED);
+            match.setPlayoffRound("FINAL");
+            matchRepository.save(match);
+        } else {
+            finalMatch.setHomeTeamId(winners.get(0));
+            finalMatch.setAwayTeamId(winners.get(1));
+            matchRepository.save(finalMatch);
+        }
     }
     
     private void reverseStandingsUpdate(Long divisionId, Long homeTeamId, Long awayTeamId, 

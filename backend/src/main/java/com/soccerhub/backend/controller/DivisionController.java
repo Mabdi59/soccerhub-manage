@@ -54,4 +54,9 @@ public class DivisionController {
     public ResponseEntity<List<Match>> generateSchedule(@PathVariable Long id) {
         return ResponseEntity.ok(divisionService.generateSchedule(id));
     }
+
+    @PostMapping("/{id}/generate-playoffs")
+    public ResponseEntity<List<Match>> generatePlayoffs(@PathVariable Long id) {
+        return ResponseEntity.ok(divisionService.generatePlayoffs(id));
+    }
 }
