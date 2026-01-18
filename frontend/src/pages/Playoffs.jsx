@@ -17,6 +17,10 @@ const Playoffs = () => {
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState('');
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [homeScore, setHomeScore] = useState('');
+  const [awayScore, setAwayScore] = useState('');
+  const [scoreError, setScoreError] = useState('');
 
   useEffect(() => {
     fetchBaseData();
@@ -77,6 +81,37 @@ const Playoffs = () => {
     }
   };
 
+  const openScoreModal = (match) => {
+    setSelectedMatch(match);
+    setHomeScore(match.homeScore ?? '');
+    setAwayScore(match.awayScore ?? '');
+    setScoreError('');
+  };
+
+  const closeScoreModal = () => {
+    setSelectedMatch(null);
+    setHomeScore('');
+    setAwayScore('');
+    setScoreError('');
+  };
+
+  const handleScoreSubmit = async () => {
+    if (homeScore === '' || awayScore === '') {
+      setScoreError('Please enter both scores.');
+      return;
+    }
+    try {
+      await matchesAPI.updateResult(selectedMatch.id, {
+        homeScore: parseInt(homeScore, 10),
+        awayScore: parseInt(awayScore, 10),
+      });
+      closeScoreModal();
+      fetchDivisionData(selectedDivisionId);
+    } catch (error) {
+      setScoreError(error.response?.data?.message || 'Failed to update score.');
+    }
+  };
+
   const teamLookup = useMemo(() => {
     const lookup = new Map();
     teams.forEach((team) => lookup.set(team.id, team.name));
@@ -97,8 +132,13 @@ const Playoffs = () => {
       );
     }
 
+    const winnerId = match.status === 'COMPLETED'
+      ? (match.homeScore >= match.awayScore ? match.homeTeamId : match.awayTeamId)
+      : null;
+    const winnerName = winnerId ? teamLookup.get(winnerId) || 'TBD' : null;
+
     return (
-      <div className="bracket-match">
+      <div className="bracket-match clickable" onClick={() => openScoreModal(match)}>
         <div className="bracket-team">
           <span>{teamLookup.get(match.homeTeamId) || 'TBD'}</span>
           {match.homeScore != null && <strong>{match.homeScore}</strong>}
@@ -116,6 +156,11 @@ const Playoffs = () => {
             {match.status}
           </span>
         </div>
+        {winnerName && (
+          <div className="winner-badge">
+            Winner: {winnerName}
+          </div>
+        )}
       </div>
     );
   };
@@ -201,6 +246,60 @@ const Playoffs = () => {
       >
         {generateError && <div className="alert alert-error">{generateError}</div>}
         <p>Generate the playoff bracket for the selected division using the top four teams.</p>
+      </Modal>
+
+      <Modal
+        isOpen={!!selectedMatch}
+        onClose={closeScoreModal}
+        title="Enter Playoff Result"
+        footer={
+          <>
+            <button className="btn btn-secondary" onClick={closeScoreModal}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={handleScoreSubmit}>
+              Save Result
+            </button>
+          </>
+        }
+      >
+        {scoreError && <div className="alert alert-error">{scoreError}</div>}
+        {selectedMatch && (
+          <>
+            <p>
+              {teamLookup.get(selectedMatch.homeTeamId) || 'TBD'} vs{' '}
+              {teamLookup.get(selectedMatch.awayTeamId) || 'TBD'}
+            </p>
+            <div className="score-input-group">
+              <div>
+                <label style={{ fontSize: '13px', color: 'var(--gray-600)', marginBottom: '8px', display: 'block' }}>
+                  Home Score
+                </label>
+                <input
+                  type="number"
+                  className="score-input"
+                  value={homeScore}
+                  onChange={(e) => setHomeScore(e.target.value)}
+                  min="0"
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', color: 'var(--gray-600)', marginBottom: '8px', display: 'block' }}>
+                  Away Score
+                </label>
+                <input
+                  type="number"
+                  className="score-input"
+                  value={awayScore}
+                  onChange={(e) => setAwayScore(e.target.value)}
+                  min="0"
+                  required
+                />
+              </div>
+            </div>
+          </>
+        )}
       </Modal>
     </Layout>
   );
