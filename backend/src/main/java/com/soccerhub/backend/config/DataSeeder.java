@@ -70,7 +70,15 @@ public class DataSeeder implements CommandLineRunner {
         referee.setPassword(passwordEncoder.encode("referee123"));
         referee.setRole(User.Role.REFEREE);
         userRepository.save(referee);
-        
+
+        // Additional test/dev user to match existing tokens or local testing
+        User mabdi = new User();
+        mabdi.setUsername("mabdi");
+        mabdi.setEmail("mabdi@soccerhub.com");
+        mabdi.setPassword(passwordEncoder.encode("mabdi123"));
+        mabdi.setRole(User.Role.ORGANIZER);
+        userRepository.save(mabdi);
+
         log.info("Seeded users");
     }
     
